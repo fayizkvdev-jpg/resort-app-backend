@@ -13,9 +13,8 @@ export const createResort = async (req: Request, res: Response): Promise<void> =
 
 export const getResorts = async (req: Request, res: Response): Promise<void> => {
     try {
-        const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
-        const skip = (page - 1) * limit;
+        const skip = parseInt(req.query.skip as string) || 0;
 
         const resorts = await Resort.find().skip(skip).limit(limit);
         const total = await Resort.countDocuments();
@@ -25,7 +24,8 @@ export const getResorts = async (req: Request, res: Response): Promise<void> => 
             data: resorts,
             pagination: {
                 total,
-                page,
+                limit,
+                skip,
                 pages: Math.ceil(total / limit),
             },
         });

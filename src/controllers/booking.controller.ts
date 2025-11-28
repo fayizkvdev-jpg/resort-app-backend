@@ -28,9 +28,8 @@ export const createBooking = async (req: AuthRequest, res: Response): Promise<vo
 
 export const getAllBookings = async (req: Request, res: Response): Promise<void> => {
     try {
-        const page = parseInt(req.query.page as string) || 1;
         const limit = parseInt(req.query.limit as string) || 10;
-        const skip = (page - 1) * limit;
+        const skip = parseInt(req.query.skip as string) || 0;
 
         const bookings = await Booking.find()
             .populate('user', 'email')
@@ -46,8 +45,8 @@ export const getAllBookings = async (req: Request, res: Response): Promise<void>
             data: bookings,
             pagination: {
                 total,
-                page,
                 limit,
+                skip,
                 pages: Math.ceil(total / limit),
             },
         });
@@ -62,10 +61,27 @@ export const getUserBookings = async (req: AuthRequest, res: Response): Promise<
             res.status(401).json({ message: 'Unauthorized' });
             return;
         }
+        const limit = parseInt(req.query.limit as string) || 10;
+        const skip = parseInt(req.query.skip as string) || 0;
+
         const bookings = await Booking.find({ user: req.user.id })
             .populate('resort', 'name image')
-            .sort({ createdAt: -1 });
-        res.json({ success: true, data: bookings });
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+
+        const total = await Booking.countDocuments({ user: req.user.id });
+
+        res.json({
+            success: true,
+            data: bookings,
+            pagination: {
+                total,
+                limit,
+                skip,
+                pages: Math.ceil(total / limit),
+            }
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: (error as Error).message });
     }
