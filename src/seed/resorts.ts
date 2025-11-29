@@ -47,11 +47,19 @@ const seedResorts = async () => {
                 }
             });
 
+            // Select 3-5 random images for the gallery
+            const galleryImages = [];
+            const numImages = Math.floor(Math.random() * 3) + 3;
+            for (let j = 0; j < numImages; j++) {
+                galleryImages.push(images[(i + j) % images.length]);
+            }
+
             resorts.push({
                 name,
                 description: `Experience luxury at ${name}. Enjoy our world-class amenities and breathtaking views. Perfect for a relaxing getaway.`,
                 price,
                 image,
+                images: galleryImages,
                 pool,
                 turf,
                 facilities
