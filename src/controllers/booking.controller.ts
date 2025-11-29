@@ -31,15 +31,21 @@ export const getAllBookings = async (req: Request, res: Response): Promise<void>
         const limit = parseInt(req.query.limit as string) || 10;
         const skip = parseInt(req.query.skip as string) || 0;
 
-        const [ bookings, total ] = await Promise.all([
-            Booking.find()
+        const status = req.query.status as string;
+        const query: any = {};
+        if (status && status !== 'all') {
+            query.status = status;
+        }
+
+        const [bookings, total] = await Promise.all([
+            Booking.find(query)
                 .populate('user', 'email')
                 .populate('resort', 'name')
                 .sort({ createdAt: -1 })
                 .skip(skip)
                 .limit(limit),
-            Booking.countDocuments(),
-        ])  
+            Booking.countDocuments(query),
+        ])
 
         res.json({
             success: true,
@@ -65,13 +71,19 @@ export const getUserBookings = async (req: AuthRequest, res: Response): Promise<
         const limit = parseInt(req.query.limit as string) || 10;
         const skip = parseInt(req.query.skip as string) || 0;
 
-        const bookings = await Booking.find({ user: req.user.id })
+        const status = req.query.status as string;
+        const query: any = { user: req.user.id };
+        if (status && status !== 'all') {
+            query.status = status;
+        }
+
+        const bookings = await Booking.find(query)
             .populate('resort', 'name image')
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(limit);
 
-        const total = await Booking.countDocuments({ user: req.user.id });
+        const total = await Booking.countDocuments(query);
 
         res.json({
             success: true,
@@ -83,6 +95,33 @@ export const getUserBookings = async (req: AuthRequest, res: Response): Promise<
                 pages: Math.ceil(total / limit),
             }
         });
+    } catch (error) {
+        res.status(500).json({ success: false, message: (error as Error).message });
+    }
+};
+
+export const updateBookingStatus = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!['pending', 'confirmed', 'cancelled'].includes(status)) {
+            res.status(400).json({ success: false, message: 'Invalid status' });
+            return;
+        }
+
+        const booking = await Booking.findByIdAndUpdate(
+            id,
+            { status },
+            { new: true }
+        );
+
+        if (!booking) {
+            res.status(404).json({ success: false, message: 'Booking not found' });
+            return;
+        }
+
+        res.json({ success: true, data: booking });
     } catch (error) {
         res.status(500).json({ success: false, message: (error as Error).message });
     }
